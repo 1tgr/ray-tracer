@@ -1,19 +1,18 @@
-module Phong where
+module Phong(phong) where
 
 import MathUtils
 import Tracing
 import Shapes
 
-phong :: Float -> Color -> Color -> Float -> Float -> Float -> [ Light ] -> Ray -> Hit -> Color
-phong ambient _ surfaceColour _ _ _ [ ] _ _ = surfaceColour `scale` ambient
-phong ambient specularColour surfaceColour exponent diffuse specular ((PointLight lightPoint) : lights) ray @ (Ray start direction) hit @ (Hit t normal _) =
-    phong ambient specularColour surfaceColour exponent diffuse specular lights ray hit
-		`add` (surfaceColour `scale` diffuse `scale` diffuseFactor)
-		`add` ((specularColour `blend` surfaceColour) `scale` specular `scale` specularFactor)
+phong ambient specularColour surfaceColour exponent diffuse specular lights ray @ (Ray start direction) hit @ (Hit { t = t, normal = normal }) =
+	foldl add (surfaceColour `scale` ambient) (map phong' lights)
 	where
 		directionToViewer = neg direction
 		hitPoint = rayPoint ray t
-		directionToLight = normalize $ neg (hitPoint `sub` lightPoint)
-		diffuseFactor = max 0 $ directionToLight `dot` normal
-		h = (directionToLight `add` directionToViewer) `scale` 0.5
-		specularFactor = (max 0 $ normal `dot` h) ** exponent
+		phong' (PointLight lightPoint) =
+			(surfaceColour `scale` diffuseFactor) `add` (specularColour `scale` specularFactor)
+			where
+				directionToLight = normalize $ neg (hitPoint `sub` lightPoint)
+				diffuseFactor = diffuse * (max 0 $ directionToLight `dot` normal)
+				h = (directionToLight `add` directionToViewer) `scale` 0.5
+				specularFactor = specular * ((max 0 $ normal `dot` h) ** exponent)

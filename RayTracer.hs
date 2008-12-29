@@ -4,48 +4,49 @@ import MathUtils
 import Scene
 import Tracing
 
--- Divides [a] into [[a], [a], ...] with each sublist of length n,
--- except the last sublist which has length <= n.
+drawPixel traceFn v @ (Vertex2 x y) = do
+	let (MathUtils.Color r g b) = traceFn x y
+	color $ Color4 r g b 1
+	vertex v
+
+drawChunk traceFn chunk = do
+	renderPrimitive Points $ mapM_ (drawPixel traceFn) chunk
+	flush
+
 chunkify n [ ] = [ ]
 chunkify n xs =
 	xs' : chunkify n rest
 	where (xs', rest) = splitAt n xs
 
-drawVert scene v @ (Vertex2 x y) = do
-	let (MathUtils.Color _ r g b) = trace scene x y
-	color $ Color4 r g b 1
-	vertex v
+x // y = fromIntegral x / fromIntegral y
 
-display' scene chunks = do
-	mapM_ renderVertex chunks
-	displayCallback $= (display scene)
-	where renderVertex vs = do
-		renderPrimitive Points $ mapM_ (drawVert $ scene) vs
-		flush
+display' traceFn size = do
+	mapM_ (drawChunk traceFn) chunks
+	displayCallback $= (display traceFn)
+	where
+		(Size w h) = size
+		ratio = w // h
+		pix2vert (x, y) = Vertex2 (((2.0 * ratio) / fromIntegral w * fromIntegral x) - ratio) ((2 // h * fromIntegral y) - ratio)
+		chunks = chunkify 256 [ pix2vert (x, y) | x <- [0 .. w - 1], y <- [0 .. h - 1] ]
 
-pix2vert (Size w h) (x, y) = 
-	Vertex2 ((2 // w * fromIntegral x) - 1.0) ((2 // h * fromIntegral y) - 1.0)
-	where x // y = fromIntegral x / fromIntegral y
-
-vertices = do
+display traceFn = do
 	size <- get windowSize
 	let (Size w h) = size
-	return $ [ pix2vert size (x, y) | x <- [0.. w - 1], y <- [0..h - 1] ]
-
-display scene = do
+	let ratio = w // h
 	clear [ ColorBuffer ]
-	displayCallback $= (vertices >>= (display' scene) . chunkify 256)
+	matrixMode $= Projection
+	loadIdentity
+	ortho (-ratio) ratio (-1) 1 (-1) 1
+	matrixMode $= Modelview 0
+	displayCallback $= (display' traceFn size)
 	postRedisplay Nothing
 
 main = do
 	getArgsAndInitialize
 	initialDisplayMode $= [ SingleBuffered, RGBMode ]
-	initialWindowSize $= Size 1200 1024
+	initialWindowSize $= Size 1024 1024
 	initialWindowPosition $= Position 100 100
 	createWindow "Ray Tracer"
 	clearColor $= Color4 0 0 0 0
-	matrixMode $= Projection
-	loadIdentity
-	ortho (-1) 1 (-1) 1 (-1) 1
-	displayCallback $= (display $ scene)
+	displayCallback $= (display $ trace scene)
 	mainLoop

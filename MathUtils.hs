@@ -4,7 +4,7 @@ data Vector = Vector Float Float Float
 type Position = Vector
 type Direction = Vector
 type Normal = Vector
-data Color = Color Float Float Float Float
+data Color = Color Float Float Float
 
 magnitude v = sqrt $ squareMagnitude v
 square n = n * n
@@ -19,24 +19,21 @@ class VectorOps a where
 	squareMagnitude :: a -> Float
 
 class (VectorOps a) => ColorOps a where
-	blend :: a -> a -> a
+	blend :: Float -> a -> a -> a
 
 instance VectorOps Color where
-	scale (Color a r g b) x = Color a (r * x) (g * x) (b * x)
-	add (Color _ r1 g1 b1) (Color _ r2 g2 b2) = Color 1 (r1 + r2) (g1 + g2) (b1 + b2)
-	dot (Color _ r1 g1 b1) (Color _ r2 g2 b2) = r1 * r2 + g1 * g2 + b1 * b2
-	sub (Color _ r1 g1 b1) (Color _ r2 g2 b2) = Color 1 (r1 - r2) (g1 - g2) (b1 - b2)
-	neg (Color _ r g b) = Color 1 (-r) (-g) (-b)
-	normalize c =
-		Color a (r / m) (g / m) (b / m)
-		where
-			(Color a r g b) = c
-			m = magnitude c
-	squareMagnitude (Color _ r g b) = r * r + g * g + b * b
+	scale (Color r g b) x = Color (r * x) (g * x) (b * x)
+	add (Color r1 g1 b1) (Color r2 g2 b2) = Color (r1 + r2) (g1 + g2) (b1 + b2)
+	dot (Color r1 g1 b1) (Color r2 g2 b2) = r1 * r2 + g1 * g2 + b1 * b2
+	sub (Color r1 g1 b1) (Color r2 g2 b2) = Color (r1 - r2) (g1 - g2) (b1 - b2)
+	neg (Color r g b) = Color (-r) (-g) (-b)
+	normalize c @ (Color r g b) =
+		Color (r / m) (g / m) (b / m)
+		where m = magnitude c
+	squareMagnitude (Color r g b) = r * r + g * g + b * b
 
 instance ColorOps Color where
-	blend (Color _ r g b) (Color 0 _ _ _) = Color 1 r g b
-	blend (Color a r1 g1 b1) (Color _ r2 g2 b2) = Color 1 (r1 * a + r2 * (1 - a)) (g1 * a + g2 * (1 - a)) (b1 * a + b2 * (1 - a))
+	blend a c1 c2 = (c1 `scale` a) `add` (c2 `scale` (1 - a))
 
 instance VectorOps Vector where
 	scale (Vector x y z)  n = Vector (x * n) (y * n) (z * n)
@@ -49,8 +46,8 @@ instance VectorOps Vector where
 		where m = magnitude v
 	squareMagnitude (Vector x y z) = x * x + y * y + z * z
 
-roots a b c =
-    if discriminant >= 0
-	then [ (-b - sqrt discriminant) / (2 * a), (-b + sqrt discriminant) / (2 * a)]
-	else [ ]
+roots a b c
+	| discriminant < 0 = [ ]
+	| discriminant > 0 = [ (-b - sqrt discriminant) / (2 * a), (-b + sqrt discriminant) / (2 * a)]
+	| otherwise = [ -b / (2 * a)]
 	where discriminant = (square b) - 4 * a * c
