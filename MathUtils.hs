@@ -8,6 +8,8 @@ data Color = Color Float Float Float
 
 magnitude v = sqrt $ squareMagnitude v
 square n = n * n
+xor True b = not b
+xor False b = b
 
 class VectorOps a where
 	scale :: a -> Float -> a

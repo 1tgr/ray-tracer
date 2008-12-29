@@ -36,9 +36,12 @@ cast scene depth ray =
 		bounce (Just hit) =
 			(blend (1 - transmission) surfaceColour transmittedColour) `add` reflectedColour
 			where
-				Hit { material = Material { shader = shader, reflection = reflection, transmission = transmission, refractiveIndex = refractiveIndex } } = hit
+				Ray _ direction = ray
+				Hit { t = t, normal = normal, material = Material { shader = shader, reflection = reflection, transmission = transmission, refractiveIndex = refractiveIndex } } = hit
+				directionToViewer = neg direction
+				hitPoint = rayPoint ray t
 				castSecondaryRay rayFn = cast scene (depth + 1) $ rayFn ray hit
-				surfaceColour = shader ray hit
+				surfaceColour = shader directionToViewer hitPoint normal
 				reflectedColour 
 					| reflection > 0 = (castSecondaryRay reflectedRay) `scale` reflection
 					| otherwise = black

@@ -3,9 +3,11 @@ module Shapes where
 import Debug.Trace
 import MathUtils
 
+type Shader = Direction -> Position -> Normal -> Color
+
 data Material = Material
 	{
-		shader :: Ray -> Hit -> Color,
+		shader :: Shader,
 		reflection :: Float,
 		transmission :: Float,
 		refractiveIndex :: Float
@@ -33,24 +35,19 @@ rayPoint (Ray start direction) t =
 epsilon = 0.001
 
 intersect (Sphere centre radius material) ray @ (Ray start direction) =
-	let
+	map intersection $ filter (> epsilon) (roots a b c)
+	where
 		a = squareMagnitude direction
 		b = 2 * direction `dot` (start `sub` centre)
 		c = squareMagnitude (start `sub` centre) - radius ^ 2
-		intersection t =
-			Hit { t = t, normal = normal, material = material }
-			where normal = ((rayPoint ray t) `sub` centre) `scale` (1.0 / radius)
-	in map intersection $ filter (> epsilon) (roots a b c)
+		normal t = ((rayPoint ray t) `sub` centre) `scale` (1.0 / radius)
+		intersection t = Hit { t = t, normal = normal t, material = material }
 
-intersect (Plane normal distance material) (Ray start direction) =
-	let
+intersect (Plane normal distance material) (Ray start direction)
+	| vd > 0 && t > epsilon = [ Hit { t = t, normal = neg normal, material = material } ]
+	| vd < 0 && t > epsilon = [ Hit { t = t, normal = normal, material = material } ]
+	| otherwise = [ ]
+	where
 		vd = normal `dot` direction
 		v0 = negate ((normal `dot` start) + distance)
-	in
-		if vd == 0
-		then [ ]
-		else
-			let	t = v0 / vd in
-			if t > epsilon
-			then [ Hit { t = t, normal = (if vd > 0 then neg normal else normal), material = material } ]
-			else [ ]
+		t = v0 / vd
