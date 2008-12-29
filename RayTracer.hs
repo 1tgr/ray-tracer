@@ -1,16 +1,18 @@
 import Control.Monad
+import Control.Parallel.Strategies
 import Graphics.UI.GLUT
 import MathUtils
 import Scene
 import Tracing
 
-drawPixel traceFn v @ (Vertex2 x y) = do
-	let (MathUtils.Color r g b) = traceFn x y
+drawPixel (v @ (Vertex2 x y), colour) = do
+	let (MathUtils.Color r g b) = colour
 	color $ Color4 r g b 1
 	vertex v
 
 drawChunk traceFn chunk = do
-	renderPrimitive Points $ mapM_ (drawPixel traceFn) chunk
+	let pixels = (parMap rwhnf) (\v @ (Vertex2 x y) -> (v, traceFn x y)) chunk
+	renderPrimitive Points $ mapM_ drawPixel pixels
 	flush
 
 chunkify n [ ] = [ ]
