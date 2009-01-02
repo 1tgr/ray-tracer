@@ -1,13 +1,13 @@
 import Control.Monad
 import Control.Parallel.Strategies
-import Graphics.UI.GLUT
+import Graphics.UI.GLUT as GLUT
 import MathUtils
 import Scene
 import Tracing
 
 drawPixel (v @ (Vertex2 x y), colour) = do
-	let (depth, MathUtils.Color r g b) = colour
-	color $ Color4 r g b 1
+	let (depth, MathUtils.Color r g b) = unpackTraceResult colour
+	GLUT.color $ Color4 r g b 1
 	-- color $ Color4 (fromIntegral depth / 16.0::GLfloat) 0 0 1
 	vertex v
 

@@ -1,8 +1,18 @@
 module Tracing where
 
+import Data.Maybe
 import Debug.Trace
 import MathUtils
 import Shapes
+
+data Hit = Hit
+	{
+		depth :: Int,
+		color :: Color,
+		ray :: Ray,
+		intersection :: Intersection,
+		secondaryHits :: [ Hit ]
+	}
 
 eyeRay x y =
 	Ray (cameraPos `add` point) $ normalize (point `sub` cameraPos)
@@ -44,17 +54,25 @@ closest (x:xs) =
 
 black = Color 0 0 0
 
-cast _ depth @ 15 _ _ = (depth, black)
+unpackTraceResult Nothing = (0, black)
+unpackTraceResult (Just Hit { depth = d, color = c }) = (d, c)
+
+cast :: [ Shape ] -> Int -> Float -> Ray -> Maybe Hit
+cast _ depth @ 15 _ _ = Nothing
 cast scene depth refractiveIndex ray =
 	(shade . closest) (foldl intersectScene [ ] scene)
 	where
 		intersectScene list shape = (intersect shape ray) ++ list
-		shade Nothing = (depth, black)
+		shade Nothing = Nothing
 		shade (Just intersection) =
-			(
-				max reflectedDepth transmittedDepth,
-				(blend (1 - transmission) surfaceColour (transmittedColour `scale` transmission)) `add` (reflectedColour `scale` reflection)
-			)
+			Just Hit
+			{
+				depth = max reflectedDepth transmittedDepth,
+				color = (blend (1 - transmission) surfaceColour (transmittedColour `scale` transmission)) `add` (reflectedColour `scale` reflection),
+				ray = ray,
+				intersection = intersection,
+				secondaryHits = catMaybes [ reflectionResult, transmissionResult ]
+			}
 			where
 				Ray _ direction = ray
 				Intersection { t = t, normal = normal, material = Material { shader = shader, reflection = reflection, transmission = transmission, refractiveIndex = newRefractiveIndex } } = intersection
@@ -71,15 +89,18 @@ cast scene depth refractiveIndex ray =
 						] in
 					Debug.Trace.trace message $ cast scene (depth + 1) newRefractiveIndex newRay
 				surfaceColour = shader directionToViewer hitPoint normal
-				(reflectedDepth, reflectedColour)
+				reflectionResult
 					| reflection > 0 = castSecondaryRay $ reflectedRay ray intersection
-					| otherwise = (depth, black)
-				(transmittedDepth, transmittedColour)
+					| otherwise = Nothing
+				(reflectedDepth, reflectedColour) = unpackTraceResult reflectionResult
+				transmissionResult
 					| transmission > 0 = 
 						case transmittedRay refractiveIndex newRefractiveIndex ray intersection of
-						Nothing -> (depth, black)
+						Nothing -> Nothing
 						Just r -> castSecondaryRay r
-					| otherwise = (depth, black)
+					| otherwise = Nothing
+				(transmittedDepth, transmittedColour) = unpackTraceResult transmissionResult
 
+trace :: [ Shape ] -> Float -> Float -> Maybe Hit
 trace scene x y =
 	cast scene 0 1 $ eyeRay x y
