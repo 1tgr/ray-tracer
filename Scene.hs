@@ -29,13 +29,14 @@ checkedShader shader1 shader2 hitPoint @ (Vector x y z)
 scene =
 	[
 		Sphere (Vector (-1) 0 0) 1 $ shiny grey, 
-		Sphere (Vector 1 0 0) 1.5 $ checked red white, 
-		Plane (Vector 0 (-1) 0) (-1) $ checked blue white
+		Sphere (Vector 1 0 0) 1.5 $ flat red, 
+		Plane (Vector 0 (-1) 0) (-1) $ flatChecked blue white
 	]
 	where
-		shiny colour = Material { shader = shinyShader colour, reflection = 0.9, transmission = 0, refractiveIndex = 0 }
-		flat colour = Material { shader = flatShader colour, reflection = 0, transmission = 0, refractiveIndex = 0 }
-		checked colour1 colour2 = Material { shader = checkedShader (shinyShader colour1) (shinyShader colour2), reflection = 0.9, transmission = 0, refractiveIndex = 0 }
+		shiny colour = Material { shader = shinyShader colour, reflection = 0.9, transmission = 0, refractiveIndex = 1 }
+		flat colour = Material { shader = flatShader colour, reflection = 0, transmission = 1, refractiveIndex = 1 }
+		shinyChecked colour1 colour2 = Material { shader = checkedShader (shinyShader colour1) (shinyShader colour2), reflection = 0.9, transmission = 0, refractiveIndex = 1 }
+		flatChecked colour1 colour2 = Material { shader = checkedShader (flatShader colour1) (flatShader colour2), reflection = 0, transmission = 0, refractiveIndex = 1 }
 		red = Color 1 0 0
 		blue = Color 0 0 1
 		grey = Color 0.5 0.5 0.5

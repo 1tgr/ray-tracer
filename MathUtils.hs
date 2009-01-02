@@ -1,6 +1,8 @@
 module MathUtils where
 
-data Vector = Vector Float Float Float 
+data Vector =
+	Vector Float Float Float 
+	deriving (Eq, Show)
 type Position = Vector
 type Direction = Vector
 type Normal = Vector

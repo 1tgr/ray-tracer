@@ -6,8 +6,9 @@ import Scene
 import Tracing
 
 drawPixel (v @ (Vertex2 x y), colour) = do
-	let (MathUtils.Color r g b) = colour
+	let (depth, MathUtils.Color r g b) = colour
 	color $ Color4 r g b 1
+	-- color $ Color4 (fromIntegral depth / 16.0::GLfloat) 0 0 1
 	vertex v
 
 drawChunk traceFn chunk = do
