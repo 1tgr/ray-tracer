@@ -10,13 +10,13 @@ eyeRay x y =
 		cameraPos = Vector 0 0 (-10)
 		point = Vector x y 0
 
-reflectedRay ray @ (Ray _ direction) hit @ (Hit { t = t, normal = normal }) =
+reflectedRay ray @ (Ray _ direction) (Intersection { t = t, normal = normal }) =
 	Ray (rayPoint ray t) $ reflection
 	where
 		c1 = -(direction `dot` normal)
 		reflection = direction `add` (normal `scale` (2 * c1))
 
-transmittedRay n1 n2 ray @ (Ray _ direction) hit @ (Hit { t = t, normal = normal }) =
+transmittedRay n1 n2 ray @ (Ray _ direction) (Intersection { t = t, normal = normal }) =
 	if sinT2 > 1
 	then
 		let message = foldl (++) [ ] 
@@ -38,9 +38,9 @@ transmittedRay n1 n2 ray @ (Ray _ direction) hit @ (Hit { t = t, normal = normal
 closest [ ] = Nothing
 closest (x:xs) =
 	Just $ foldl selectNearest x xs
-	where selectNearest hit1 @ Hit { t = t1 } hit2 @ Hit { t = t2 }
-		| t1 < t2 = hit1
-		| otherwise = hit2
+	where selectNearest i1 @ Intersection { t = t1 } i2 @ Intersection { t = t2 }
+		| t1 < t2 = i1
+		| otherwise = i2
 
 black = Color 0 0 0
 
@@ -50,14 +50,14 @@ cast scene depth refractiveIndex ray =
 	where
 		intersectScene list shape = (intersect shape ray) ++ list
 		shade Nothing = (depth, black)
-		shade (Just hit) =
+		shade (Just intersection) =
 			(
 				max reflectedDepth transmittedDepth,
 				(blend (1 - transmission) surfaceColour (transmittedColour `scale` transmission)) `add` (reflectedColour `scale` reflection)
 			)
 			where
 				Ray _ direction = ray
-				Hit { t = t, normal = normal, material = Material { shader = shader, reflection = reflection, transmission = transmission, refractiveIndex = newRefractiveIndex } } = hit
+				Intersection { t = t, normal = normal, material = Material { shader = shader, reflection = reflection, transmission = transmission, refractiveIndex = newRefractiveIndex } } = intersection
 				directionToViewer = neg direction
 				hitPoint = rayPoint ray t
 				castSecondaryRay newRay =
@@ -72,11 +72,11 @@ cast scene depth refractiveIndex ray =
 					Debug.Trace.trace message $ cast scene (depth + 1) newRefractiveIndex newRay
 				surfaceColour = shader directionToViewer hitPoint normal
 				(reflectedDepth, reflectedColour)
-					| reflection > 0 = castSecondaryRay $ reflectedRay ray hit
+					| reflection > 0 = castSecondaryRay $ reflectedRay ray intersection
 					| otherwise = (depth, black)
 				(transmittedDepth, transmittedColour)
 					| transmission > 0 = 
-						case transmittedRay refractiveIndex newRefractiveIndex ray hit of
+						case transmittedRay refractiveIndex newRefractiveIndex ray intersection of
 						Nothing -> (depth, black)
 						Just r -> castSecondaryRay r
 					| otherwise = (depth, black)

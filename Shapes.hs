@@ -13,7 +13,7 @@ data Material = Material
 		refractiveIndex :: Float
 	}
 
-data Hit = Hit
+data Intersection = Intersection
 	{
 		t :: Float,
 		normal :: Normal,
@@ -41,12 +41,12 @@ intersect (Sphere centre radius material) ray @ (Ray start direction) =
 		b = 2 * direction `dot` (start `sub` centre)
 		c = squareMagnitude (start `sub` centre) - radius ^ 2
 		normal t = normalize ((rayPoint ray t) `sub` centre)
-		intersection t = Hit { t = t, normal = normal t, material = material }
-		surfaceFacesRay Hit { normal = normal } = (direction `dot` normal) < 0
+		intersection t = Intersection { t = t, normal = normal t, material = material }
+		surfaceFacesRay Intersection { normal = normal } = (direction `dot` normal) < 0
 
 intersect (Plane normal distance material) (Ray start direction)
-	| vd > 0 && t > epsilon = [ Hit { t = t, normal = neg normal, material = material } ]
-	| vd < 0 && t > epsilon = [ Hit { t = t, normal = normal, material = material } ]
+	| vd > 0 && t > epsilon = [ Intersection { t = t, normal = neg normal, material = material } ]
+	| vd < 0 && t > epsilon = [ Intersection { t = t, normal = normal, material = material } ]
 	| otherwise = [ ]
 	where
 		vd = normal `dot` direction
