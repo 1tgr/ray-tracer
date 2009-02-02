@@ -29,7 +29,7 @@ display' traceFn size = do
 	where
 		(Size w h) = size
 		ratio = w // h
-		pix2vert (x, y) = Vertex2 (((2 * ratio) / fromIntegral w * fromIntegral x) - ratio) ((2 // h * fromIntegral y) - ratio)
+		pix2vert (x, y) = Vertex2 (((2 * ratio) / fromIntegral w * fromIntegral x) - ratio) ((2 // h * fromIntegral y) - 1)
 		chunks = chunkify 256 [ pix2vert (x, y) | x <- [0 .. w - 1], y <- [0 .. h - 1] ]
 
 display traceFn = do

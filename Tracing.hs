@@ -20,15 +20,17 @@ eyeRay x y =
 		cameraPos = Vector 0 0 (-10)
 		point = Vector x y 0
 
-reflectedRay ray @ (Ray _ direction) (Intersection { t = t, normal = normal }) =
+reflectedRay ray @ (Ray _ direction) Intersection { t = t, normal = normal } =
 	Ray (rayPoint ray t) $ reflection
 	where
 		c1 = -(direction `dot` normal)
 		reflection = direction `add` (normal `scale` (2 * c1))
 
-transmittedRay n1 n2 ray @ (Ray _ direction) (Intersection { t = t, normal = normal }) =
-	if sinT2 > 1
-	then
+transmittedRay n1 n2 ray @ (Ray _ direction) Intersection { t = t, normal = normal }
+	| magnitude normal > 1.0001 = error ("got non-normalized normal: | " ++ show normal ++ " | = " ++ show (magnitude normal))
+	| magnitude direction > 1.0001 = error ("got non-normalized direction: | " ++ show direction ++ " | = " ++ show (magnitude direction))
+	| magnitude refraction > 1.0001 = error ("got non-normalized refraction: | " ++ show refraction ++ " | = " ++ show (magnitude refraction))
+	| sinT2 > 1 =
 		let message = foldl (++) [ ] 
 			[
 				"transmittedRay: total internal reflection: n1/n2 = ", show n1, "/", show n2,
@@ -38,12 +40,12 @@ transmittedRay n1 n2 ray @ (Ray _ direction) (Intersection { t = t, normal = nor
 				", sinT2 = ", show sinT2 
 			] in
 		Debug.Trace.trace message Nothing
-	else Just $ Ray (rayPoint ray t) refraction
+	| otherwise = Just $ Ray (rayPoint ray t) refraction
 	where
 		n = n1 / n2
 		cosI = normal `dot` direction
 		sinT2 = n * n * (1 - (cosI * cosI))
-		refraction = (direction `scale` n) `sub` (normal `scale` (n + sqrt (1 - sinT2)))
+		refraction = (direction `scale` n) `sub` (normal `scale` ((n * cosI) + sqrt (1 - sinT2)))
 
 closest [ ] = Nothing
 closest (x:xs) =
@@ -79,7 +81,7 @@ cast scene depth refractiveIndex ray =
 				directionToViewer = neg direction
 				hitPoint = rayPoint ray t
 				castSecondaryRay newRay =
-					let (Ray _ newDirection) = newRay in
+					{- let (Ray _ newDirection) = newRay in
 					let message = foldl (++) [ ]
 						[
 							"castSecondaryRay: depth = ", show depth,
@@ -87,7 +89,7 @@ cast scene depth refractiveIndex ray =
 							", n1/n2 = ", show refractiveIndex, "/", show newRefractiveIndex,
 							", direction = ", show direction, " -> ", show newDirection
 						] in
-					Debug.Trace.trace message $ cast scene (depth + 1) newRefractiveIndex newRay
+					Debug.Trace.trace message $ -} cast scene (depth + 1) newRefractiveIndex newRay
 				surfaceColour = shader directionToViewer hitPoint normal
 				reflectionResult
 					| reflection > 0 = castSecondaryRay $ reflectedRay ray intersection

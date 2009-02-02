@@ -35,14 +35,13 @@ rayPoint (Ray start direction) t =
 epsilon = 0.001
 
 intersect (Sphere centre radius material) ray @ (Ray start direction) =
-	filter surfaceFacesRay $ map intersection $ filter (> epsilon) (roots a b c)
+	map intersection $ filter (> epsilon) (roots a b c)
 	where
 		a = squareMagnitude direction
 		b = 2 * direction `dot` (start `sub` centre)
 		c = squareMagnitude (start `sub` centre) - radius ^ 2
 		normal t = normalize ((rayPoint ray t) `sub` centre)
 		intersection t = Intersection { t = t, normal = normal t, material = material }
-		surfaceFacesRay Intersection { normal = normal } = (direction `dot` normal) < 0
 
 intersect (Plane normal distance material) (Ray start direction)
 	| vd > 0 && t > epsilon = [ Intersection { t = t, normal = neg normal, material = material } ]
