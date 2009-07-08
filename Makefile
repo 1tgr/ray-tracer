@@ -1,3 +1,5 @@
+GHC = /opt/local/bin/ghc
+
 all:
-	ghc -threaded --make RayTracer
-	ghc --make RayTracerDebug
+	$(GHC) -threaded --make RayTracer
+	$(GHC) --make RayTracerDebug
