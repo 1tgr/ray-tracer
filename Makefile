@@ -1,5 +1,11 @@
-GHC = /opt/local/bin/ghc
+all: test
 
-all:
-	$(GHC) -threaded --make RayTracer
-	$(GHC) --make RayTracerDebug
+build:
+	mkdir -p bin obj
+	ghc --make -Wall -o bin/RayTracer -outputdir obj *.hs
+
+clean:
+	rm -r bin obj
+
+test: build
+	bin/RayTracer
