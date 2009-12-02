@@ -6,8 +6,8 @@ import Scene
 import Tracing
 
 drawPixel :: VertexComponent a => (Vertex2 a, Maybe Hit) -> IO ()
-drawPixel (v @ (Vertex2 x y), colour) = do
-  let (depth, MathUtils.Color r g b) = unpackTraceResult colour
+drawPixel (v, colour) = do
+  let MathUtils.Color r g b = snd $ unpackTraceResult colour
   GLUT.color $ Color4 r g b 1
   -- color $ Color4 (fromIntegral depth / 16.0::GLfloat) 0 0 1
   vertex v
@@ -19,7 +19,7 @@ drawChunk traceFn chunk = do
   flush
 
 chunkify :: Int -> [ t ] -> [ [ t ] ]
-chunkify n [ ] = [ ]
+chunkify _ [ ] = [ ]
 chunkify n xs = let (xs', rest) = splitAt n xs in xs' : chunkify n rest
 
 (//) :: (Integral a, Integral b, Fractional c) => a -> b -> c
@@ -31,7 +31,7 @@ display' traceFn size = do
   displayCallback $= (display traceFn)
   where (Size w h) = size
         ratio = w // h
-        pix2vert (x, y) = Vertex2 (((2 * ratio) / fromIntegral w * fromIntegral x) - ratio) ((2 // h * fromIntegral y) - 1)
+        pix2vert (x, y) = Vertex2 (((2 * ratio) / fromIntegral w * fromIntegral x) - ratio) (((2::Integer) // h * fromIntegral y) - 1)
         chunks = chunkify 256 [ pix2vert (x, y) | x <- [0 .. w - 1], y <- [0 .. h - 1] ]
 
 display :: (VertexComponent a, Fractional a) => (a -> a -> Maybe Hit) -> DisplayCallback

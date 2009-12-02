@@ -1,18 +1,17 @@
 module Tracing where
 
 import Data.Maybe
+import Data.Ord
 import Debug.Trace
+import List(minimumBy)
 import MathUtils
 import Shapes
 
-data Hit = Hit
-  {
-    depth :: Int,
-    color :: Color,
-    ray :: Ray,
-    intersection :: Intersection,
-    secondaryHits :: [ Hit ]
-  }
+data Hit = Hit { depth :: Int,
+                 color :: Color,
+                 ray :: Ray,
+                 intersection :: Intersection,
+                 secondaryHits :: [ Hit ] }
 
 eyeRay :: Float -> Float -> Ray
 eyeRay x y = Ray (cameraPos `add` point) $ normalize (point `sub` cameraPos)
@@ -20,7 +19,7 @@ eyeRay x y = Ray (cameraPos `add` point) $ normalize (point `sub` cameraPos)
         point = Vector x y 0
 
 reflectedRay :: Ray -> Intersection -> Ray
-reflectedRay ray @ (Ray _ direction) Intersection { t = t, normal = normal } =Ray (rayPoint ray t) $ reflection
+reflectedRay ray_ @ (Ray _ direction) Intersection { t = t, normal = normal } = Ray (rayPoint ray_ t) $ reflection
   where c1 = -(direction `dot` normal)
         reflection = direction `add` (normal `scale` (2 * c1))
 
@@ -43,9 +42,7 @@ transmittedRay n1 n2 ray @ (Ray _ direction) Intersection { t = t, normal = norm
 
 closest :: [ Intersection ] -> Maybe Intersection
 closest [ ] = Nothing
-closest (x:xs) = Just $ foldl selectNearest x xs
-  where selectNearest i1 @ Intersection { t = t1 } i2 @ Intersection { t = t2 } | t1 < t2 = i1
-                                                                                | otherwise = i2
+closest list = Just $ minimumBy (comparing t) list
 
 black :: Color
 black = Color 0 0 0
@@ -56,28 +53,32 @@ unpackTraceResult (Just Hit { depth = d, color = c }) = (d, c)
 
 cast :: [ Shape ] -> Int -> Float -> Ray -> Maybe Hit
 cast _ depth @ 15 _ _ = Nothing
-cast scene depth refractiveIndex ray = (shade . closest) (foldl intersectScene [ ] scene)
+cast scene depth refractiveIndex ray @ (Ray _ direction) = shade 
+                                                         $ foldl intersectScene [ ]
+                                                         $ scene
   where intersectScene list shape = (intersect shape ray) ++ list
-        shade Nothing = Nothing
-        shade (Just intersection) = Just Hit { depth = max reflectedDepth transmittedDepth,
-                                               color = (blend (1 - transmission) surfaceColour (transmittedColour `scale` transmission)) `add` (reflectedColour `scale` reflection),
-                                               ray = ray,
-                                               intersection = intersection,
-                                               secondaryHits = catMaybes [ reflectionResult, transmissionResult ] }
-          where Ray _ direction = ray
-                Intersection { t = t, normal = normal, material = Material { shader = shader, reflection = reflection, transmission = transmission, refractiveIndex = newRefractiveIndex } } = intersection
-                directionToViewer = neg direction
-                hitPoint = rayPoint ray t
-                castSecondaryRay newRay = cast scene (depth + 1) newRefractiveIndex newRay
-                surfaceColour = shader directionToViewer hitPoint normal
-                reflectionResult | reflection > 0 = castSecondaryRay $ reflectedRay ray intersection
+        directionToViewer = neg direction
+        shade intersections = do
+          intersection <- closest intersections
+          let Intersection { t = t, 
+                             normal = normal, 
+                             material = Material { shader = shader, 
+                                                   reflection = reflection, 
+                                                   transmission = transmission, 
+                                                   refractiveIndex = newRefractiveIndex } } = intersection
+          let castSecondaryRay = cast scene (depth + 1) newRefractiveIndex
+          let reflectionResult | reflection > 0 = castSecondaryRay $ reflectedRay ray intersection
+                               | otherwise = Nothing
+          let transmissionResult | transmission > 0 = transmittedRay refractiveIndex newRefractiveIndex ray intersection >>= castSecondaryRay
                                  | otherwise = Nothing
-                (reflectedDepth, reflectedColour) = unpackTraceResult reflectionResult
-                transmissionResult | transmission > 0 = case transmittedRay refractiveIndex newRefractiveIndex ray intersection of
-                                                        Nothing -> Nothing
-                                                        Just r -> castSecondaryRay r
-                                   | otherwise = Nothing
-                (transmittedDepth, transmittedColour) = unpackTraceResult transmissionResult
+          let (reflectedDepth, reflectedColour) = unpackTraceResult reflectionResult
+          let (transmittedDepth, transmittedColour) = unpackTraceResult transmissionResult
+          let surfaceColour = shader directionToViewer (rayPoint ray t) normal
+          return $ Hit { depth = max reflectedDepth transmittedDepth,
+                         color = (blend (1 - transmission) surfaceColour (transmittedColour `scale` transmission)) `add` (reflectedColour `scale` reflection),
+                         ray = ray,
+                         intersection = intersection,
+                         secondaryHits = catMaybes [ reflectionResult, transmissionResult ] }
 
 trace :: [ Shape ] -> Float -> Float -> Maybe Hit
 trace scene x y = cast scene 0 1 $ eyeRay x y

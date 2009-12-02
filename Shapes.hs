@@ -1,8 +1,7 @@
 module Shapes where
 
+import Lighting
 import MathUtils
-
-type Shader = Direction -> Position -> Normal -> Color
 
 data Material = Material
   {
@@ -21,12 +20,8 @@ data Intersection = Intersection
 
 data Ray = Ray Position Direction
 
-data Light 
-  = PointLight Position
-
-data Shape
-  = Sphere Position Float Material
-  | Plane Normal Float Material
+data Shape = Sphere Position Float Material
+           | Plane Normal Float Material
 
 rayPoint :: Ray -> Float -> Position
 rayPoint (Ray start direction) t = start `add` (direction `scale` t)
