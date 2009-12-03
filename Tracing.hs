@@ -7,23 +7,23 @@ import List(minimumBy)
 import MathUtils
 import Shapes
 
-data Hit = Hit { depth :: Int,
-                 color :: Color,
-                 ray :: Ray,
-                 intersection :: Intersection,
-                 secondaryHits :: [ Hit ] }
+data Hit vector colour num = Hit { depth :: Int,
+                                   color :: colour,
+                                   ray :: Ray vector num,
+                                   intersection :: Intersection vector colour num,
+                                   secondaryHits :: [ Hit vector colour num ] }
 
-eyeRay :: Float -> Float -> Ray
+eyeRay :: (Num num, Vector vector num) => num -> num -> Ray vector num
 eyeRay x y = Ray (cameraPos `add` point) $ normalize (point `sub` cameraPos)
-  where cameraPos = Vector 0 0 (-10)
-        point = Vector x y 0
+  where cameraPos = fromXYZ 0 0 (-10)
+        point = fromXYZ x y 0
 
-reflectedRay :: Ray -> Intersection -> Ray
+reflectedRay :: (Color colour num, Vector vector num) => Ray vector num -> Intersection vector colour num -> Ray vector num
 reflectedRay ray_ @ (Ray _ direction) Intersection { t = t, normal = normal } = Ray (rayPoint ray_ t) $ reflection
   where c1 = -(direction `dot` normal)
         reflection = direction `add` (normal `scale` (2 * c1))
 
-transmittedRay :: Float -> Float -> Ray -> Intersection -> Maybe Ray
+transmittedRay :: (Color colour num, Ord num, Show vector, Vector vector num) => num -> num -> Ray vector num -> Intersection vector colour num -> Maybe (Ray vector num)
 transmittedRay n1 n2 ray @ (Ray _ direction) Intersection { t = t, normal = normal }
   | magnitude normal > 1.0001 = error ("got non-normalized normal: | " ++ show normal ++ " | = " ++ show (magnitude normal))
   | magnitude direction > 1.0001 = error ("got non-normalized direction: | " ++ show direction ++ " | = " ++ show (magnitude direction))
@@ -40,18 +40,18 @@ transmittedRay n1 n2 ray @ (Ray _ direction) Intersection { t = t, normal = norm
         sinT2 = n * n * (1 - (cosI * cosI))
         refraction = (direction `scale` n) `sub` (normal `scale` ((n * cosI) + sqrt (1 - sinT2)))
 
-closest :: [ Intersection ] -> Maybe Intersection
+closest :: (Color colour num, Ord num, Vector vector num) => [ Intersection vector colour num ] -> Maybe (Intersection vector colour num)
 closest [ ] = Nothing
 closest list = Just $ minimumBy (comparing t) list
 
-black :: Color
-black = Color 0 0 0
+black :: Color colour num => colour
+black = fromRGB 0 0 0
 
-unpackTraceResult :: Maybe Hit -> (Int, Color)
+unpackTraceResult :: Color colour num => Maybe (Hit vector colour num) -> (Int, colour)
 unpackTraceResult Nothing = (0, black)
 unpackTraceResult (Just Hit { depth = d, color = c }) = (d, c)
 
-cast :: [ Shape ] -> Int -> Float -> Ray -> Maybe Hit
+cast :: (Color colour num, Ord num, Show vector, Vector colour num, Vector vector num) => [ Shape vector colour num ] -> Int -> num -> Ray vector num -> Maybe (Hit vector colour num)
 cast _ depth @ 15 _ _ = Nothing
 cast scene depth refractiveIndex ray @ (Ray _ direction) = shade 
                                                          $ foldl intersectScene [ ]
@@ -80,5 +80,5 @@ cast scene depth refractiveIndex ray @ (Ray _ direction) = shade
                          intersection = intersection,
                          secondaryHits = catMaybes [ reflectionResult, transmissionResult ] }
 
-trace :: [ Shape ] -> Float -> Float -> Maybe Hit
+trace :: (Color colour num, Ord num, Show vector, Vector colour num, Vector vector num) => [ Shape vector colour num ] -> num -> num -> Maybe (Hit vector colour num)
 trace scene x y = cast scene 0 1 $ eyeRay x y

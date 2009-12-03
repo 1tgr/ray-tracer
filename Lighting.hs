@@ -1,7 +1,5 @@
 module Lighting where
 
-import MathUtils
-  
-type Shader = Direction -> Position -> Normal -> Color
+type Shader vector colour = vector -> vector -> vector -> colour
 
-data Light = PointLight Position
+data Light vector = PointLight vector
