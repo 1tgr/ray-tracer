@@ -53,18 +53,18 @@ unpackTraceResult (Just Hit { depth = d, color = c }) = (d, c)
 
 cast :: (Color colour num, Ord num, Show vector, Vector colour num, Vector vector num) => [ Shape vector colour num ] -> Int -> num -> Ray vector num -> Maybe (Hit vector colour num)
 cast _ depth @ 15 _ _ = Nothing
-cast scene depth refractiveIndex ray @ (Ray _ direction) = shade 
+cast scene depth refractiveIndex ray @ (Ray _ direction) = shade
                                                          $ foldl intersectScene [ ]
                                                          $ scene
   where intersectScene list shape = (intersect shape ray) ++ list
         directionToViewer = neg direction
         shade intersections = do
           intersection <- closest intersections
-          let Intersection { t = t, 
-                             normal = normal, 
-                             material = Material { shader = shader, 
-                                                   reflection = reflection, 
-                                                   transmission = transmission, 
+          let Intersection { t = t,
+                             normal = normal,
+                             material = Material { shader = shader,
+                                                   reflection = reflection,
+                                                   transmission = transmission,
                                                    refractiveIndex = newRefractiveIndex } } = intersection
           let castSecondaryRay = cast scene (depth + 1) newRefractiveIndex
           let reflectionResult | reflection > 0 = castSecondaryRay $ reflectedRay ray intersection

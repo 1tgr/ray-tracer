@@ -15,7 +15,7 @@ checkedShader shader1 shader2 hitPoint @ (NumVector x y z) | xeven `xor` yeven `
                                                            | otherwise = shader2 hitPoint
   where xeven = even (truncate (x * 100.0) :: Integer)
         yeven = even (truncate (y * 100.0) :: Integer)
-        zeven = even (truncate (z * 100.0) :: Integer) 
+        zeven = even (truncate (z * 100.0) :: Integer)
 
 scene :: (Color colour num, Floating num, RealFrac num) => [ Shape (NumVector num) colour num ]
 scene = [ Sphere (fromXYZ (-1) 0 0) 1 $ flat grey,
